@@ -122,4 +122,5 @@ def process_utterance(in_dir, out_dir, basename, scalers):
     f0_scaler.partial_fit(f0[f0!=0].reshape(-1, 1))
     energy_scaler.partial_fit(energy[energy != 0].reshape(-1, 1))
 
-    return '|'.join([basename, text]), mel_spectrogram.shape[1]
+    speaker = 'kss'
+    return '|'.join([basename, speaker, text]), mel_spectrogram.shape[1]

@@ -1,3 +1,5 @@
+import os
+import json
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,13 +27,25 @@ class FastSpeech2(nn.Module):
         self.use_postnet = use_postnet
         if self.use_postnet:
             self.postnet = PostNet()
+        
+        self.speaker_emb = None
+        if hp.multi_speaker:
+            with open(os.path.join(hp.preprocessed_path, "speakers.json"), "r",) as f:
+                n_speaker = len(json.load(f))
+            self.speaker_emb = nn.Embedding(n_speaker, hp.encoder_hidden)
 
-    def forward(self, src_seq, src_len, mel_len=None, d_target=None, p_target=None, e_target=None, max_src_len=None, max_mel_len=None, dur_pitch_energy_aug=None, f0_stat=None, energy_stat=None):
+    def forward(self, speakers, src_seq, src_len, mel_len=None, d_target=None, p_target=None, e_target=None, max_src_len=None, max_mel_len=None, dur_pitch_energy_aug=None, f0_stat=None, energy_stat=None):
 
         src_mask = get_mask_from_lengths(src_len, max_src_len)
         mel_mask = get_mask_from_lengths(mel_len, max_mel_len) if mel_len is not None else None
         
         encoder_output = self.encoder(src_seq, src_mask)
+
+        if self.speaker_emb is not None:
+            output = output + self.speaker_emb(speakers).unsqueeze(1).expand(
+                -1, max_src_len, -1
+            )
+
         if d_target is not None:
             variance_adaptor_output, d_prediction, p_prediction, e_prediction, _, _ = self.variance_adaptor(
                 encoder_output, src_mask, mel_mask, d_target, p_target, e_target, max_mel_len)

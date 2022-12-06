@@ -10,18 +10,22 @@ import audio as Audio
 from utils import pad_1D, pad_2D, process_meta, standard_norm
 from text import text_to_sequence, sequence_to_text
 import time
+import json
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class Dataset(Dataset):
     def __init__(self, filename="train.txt", sort=True):
-        self.basename, self.text = process_meta(os.path.join(hparams.preprocessed_path, filename))
+        self.basename, self.speaker, self.text = process_meta(os.path.join(hparams.preprocessed_path, filename))
         
         self.mean_mel, self.std_mel = np.load(os.path.join(hparams.preprocessed_path, "mel_stat.npy"))
         self.mean_f0, self.std_f0 = np.load(os.path.join(hparams.preprocessed_path, "f0_stat.npy"))
         self.mean_energy, self.std_energy = np.load(os.path.join(hparams.preprocessed_path, "energy_stat.npy"))
 
+        with open(os.path.join(hparams.preprocessed_path, "speakers.json"), "r",) as f:
+            self.speaker_map = json.load(f)
+        
         self.sort = sort
 
     def __len__(self):
@@ -30,6 +34,8 @@ class Dataset(Dataset):
     def __getitem__(self, idx):
         t=self.text[idx]
         basename=self.basename[idx]
+        speaker = self.speaker[idx]
+        speaker_id = self.speaker_map[speaker]
         phone = np.array(text_to_sequence(t, []))
         
         mel_path = os.path.join(
@@ -46,6 +52,7 @@ class Dataset(Dataset):
         energy = np.load(energy_path)
         
         sample = {"id": basename,
+                  "speaker": speaker_id,
                   "text": phone,
                   "mel_target": mel_target,
                   "D": D,
@@ -56,6 +63,7 @@ class Dataset(Dataset):
 
     def reprocess(self, batch, cut_list):
         ids = [batch[ind]["id"] for ind in cut_list]
+        speakers = [batch[ind]["speaker"] for ind in cut_list]
         texts = [batch[ind]["text"] for ind in cut_list]
         mel_targets = [standard_norm(batch[ind]["mel_target"], self.mean_mel, self.std_mel, is_mel=True) for ind in cut_list]
         Ds = [batch[ind]["D"] for ind in cut_list]
@@ -74,7 +82,8 @@ class Dataset(Dataset):
         length_mel = np.array(list())
         for mel in mel_targets:
             length_mel = np.append(length_mel, mel.shape[0])
-        
+
+        speakers = np.array(speakers) 
         texts = pad_1D(texts)
         Ds = pad_1D(Ds)
         mel_targets = pad_2D(mel_targets)
@@ -83,6 +92,7 @@ class Dataset(Dataset):
         log_Ds = np.log(Ds + hparams.log_offset)
 
         out = {"id": ids,
+               "speaker": speakers,
                "text": texts,
                "mel_target": mel_targets,
                "D": Ds,

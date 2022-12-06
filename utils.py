@@ -51,11 +51,13 @@ def process_meta(meta_path):
     with open(meta_path, "r", encoding="utf-8") as f:
         text = []
         name = []
+        speaker = []
         for line in f.readlines():
-            n, t = line.strip('\n').split('|')
+            n, s, t = line.strip('\n').split('|')
             name.append(n)
+            speaker.append(s)
             text.append(t)
-        return name, text
+        return name, speaker, text
 
 def get_param_num(model):
     num_param = sum(param.numel() for param in model.parameters())

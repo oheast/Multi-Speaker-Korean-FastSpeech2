@@ -99,6 +99,7 @@ def main(args):
                 
                 # Get Data
                 text = torch.from_numpy(data_of_batch["text"]).long().to(device)
+                speaker = torch.from_numpy(data_of_batch["speaker"]).long().to(device)
                 mel_target = torch.from_numpy(data_of_batch["mel_target"]).float().to(device)
                 D = torch.from_numpy(data_of_batch["D"]).long().to(device)
                 log_D = torch.from_numpy(data_of_batch["log_D"]).float().to(device)
@@ -111,7 +112,7 @@ def main(args):
                 
                 # Forward
                 mel_output, mel_postnet_output, log_duration_output, f0_output, energy_output, src_mask, mel_mask, _ = model(
-                    text, src_len, mel_len, D, f0, energy, max_src_len, max_mel_len)
+                    speaker, text, src_len, mel_len, D, f0, energy, max_src_len, max_mel_len)
                 
                 # Cal Loss
                 mel_loss, mel_postnet_loss, d_loss, f_loss, e_loss = Loss(
@@ -179,7 +180,7 @@ def main(args):
                 train_logger.add_scalar('Loss/F0_loss', f_l, current_step)
                 train_logger.add_scalar('Loss/energy_loss', e_l, current_step)
                 
-                if current_step % hp.save_step == 0:
+                if current_step % hp.save_step == 0 or current_step == total_step:
                     torch.save({'model': model.state_dict(), 'optimizer': optimizer.state_dict(
                     )}, os.path.join(checkpoint_path, 'checkpoint_{}.pth.tar'.format(current_step)))
                     print("save model at step {} ...".format(current_step))

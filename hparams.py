@@ -1,12 +1,12 @@
 import os
 ### kss ###
 dataset = "kss"
-data_path = os.path.join("/home/minsu/hdd3/dataset/", dataset)
+data_path = os.path.join("/data", dataset)
 meta_name = "transcript.v.1.4.txt"	# "transcript.v.1.4.txt" or "transcript.v.1.3.txt" 
 textgrid_name = "TextGrid.zip"
 
 ### set GPU number ###
-train_visible_devices = "0"
+train_visible_devices = "0,1"
 synth_visible_devices = "0"
 
 # Text
@@ -49,6 +49,9 @@ variance_predictor_dropout = 0.5
 
 max_seq_len = 1000
 
+# multi speaker
+multi_speaker = False
+
 # Checkpoints and synthesis path
 preprocessed_path = os.path.join("./preprocessed/", dataset)
 checkpoint_path = os.path.join("./ckpt/", dataset)
@@ -58,8 +61,8 @@ test_path = "./results"
 
 
 # Optimizer
-batch_size = 16
-epochs = 1000
+batch_size = 64
+epochs = 5000
 n_warm_up_step = 4000
 grad_clip_thresh = 1.0
 acc_steps = 1
@@ -80,8 +83,8 @@ log_offset = 1.
 
 # Save, log and synthesis
 save_step = 10000
-eval_step = 1000
+eval_step = 10000
 eval_size = 256
-log_step = 1000
+log_step = 100
 clear_Time = 20
 
