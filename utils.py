@@ -10,8 +10,10 @@ from matplotlib import pyplot as plt
 from scipy.io import wavfile
 from vocoder.vocgan_generator import Generator
 import hparams as hp
+import vocoder.hifigan as hifigan
 import os
 import text
+import json
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -110,30 +112,50 @@ def get_mask_from_lengths(lengths, max_len=None):
 
     return mask
 
-def get_vocgan(ckpt_path, n_mel_channels=hp.n_mel_channels, generator_ratio = [4, 4, 2, 2, 2, 2], n_residual_layers=4, mult=256, out_channels=1):
+def get_vocoder(ckpt_path, n_mel_channels=hp.n_mel_channels, generator_ratio = [4, 4, 2, 2, 2, 2], n_residual_layers=4, mult=256, out_channels=1):
 
-    checkpoint = torch.load(ckpt_path)
-    model = Generator(n_mel_channels, n_residual_layers,
-                        ratios=generator_ratio, mult=mult,
-                        out_band=out_channels)
+    if hp.vocoder == "vocgan":
+        checkpoint = torch.load(ckpt_path)
+        vocoder = Generator(n_mel_channels, n_residual_layers,
+                            ratios=generator_ratio, mult=mult,
+                            out_band=out_channels)
 
-    model.load_state_dict(checkpoint['model_g'])
-    model.to(device).eval()
+        vocoder.load_state_dict(checkpoint['model_g'])
+        vocoder.to(device).eval()
+    
+    elif hp.vocoder == "hifigan":
+        with open("vocoder/hifigan/config.json", "r") as f:
+            config = json.load(f)
+        config = hifigan.AttrDict(config)
+        vocoder = hifigan.Generator(config)
+        if hp.speaker == "LJSpeech":
+            ckpt = torch.load("vocoder/hifigan/generator_LJSpeech.pth.tar")
+        elif hp.speaker == "universal":
+            ckpt = torch.load("vocoder/hifigan/generator_universal.pth.tar")
+        vocoder.load_state_dict(ckpt["generator"])
+        vocoder.eval()
+        vocoder.remove_weight_norm()
+        vocoder.to(device)
 
-    return model
+    return vocoder
 
 def vocgan_infer(mel, vocoder, path):
-    model = vocoder
 
     with torch.no_grad():
         if len(mel.shape) == 2:
             mel = mel.unsqueeze(0)
-
-        audio = model.infer(mel).squeeze()
-        audio = hp.max_wav_value * audio[:-(hp.hop_length*10)]
-        audio = audio.clamp(min=-hp.max_wav_value, max=hp.max_wav_value-1)
-        audio = audio.short().cpu().detach().numpy()
-
+        
+        if hp.vocoder == "vocgan":
+            audio = vocoder.infer(mel).squeeze()
+            audio = hp.max_wav_value * audio[:-(hp.hop_length*10)]
+            audio = audio.clamp(min=-hp.max_wav_value, max=hp.max_wav_value-1)
+            audio = audio.short().cpu().detach().numpy()
+        
+        elif hp.vocoder == "hifigan":
+            # mel to wav using hifigan
+            audio = vocoder(mel).squeeze()
+            audio = (audio.cpu().numpy() * hp.max_wav_value).astype("int16")
+        
         wavfile.write(path, hp.sampling_rate, audio)
 
 

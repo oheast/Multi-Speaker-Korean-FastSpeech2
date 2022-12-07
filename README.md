@@ -9,6 +9,7 @@
 
 #### 변경 사항
 
+- vocoder hifigan 추가
 - hparam.py 내 multi_speaker 변수 추가
 - speaker embedding 추가
 - dataset 내 speaker 정보 추가 및 파싱 처리 

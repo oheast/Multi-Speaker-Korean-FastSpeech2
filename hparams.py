@@ -66,14 +66,14 @@ epochs = 5000
 n_warm_up_step = 4000
 grad_clip_thresh = 1.0
 acc_steps = 1
-
 betas = (0.9, 0.98)
 eps = 1e-9
 weight_decay = 0.
 
 
 # Vocoder
-vocoder = 'vocgan'
+vocoder = 'hifigan'	# vocgan, hifigan
+speaker = 'universal' # LJSpeech, universal
 vocoder_pretrained_model_name = "vocgan_kss_pretrained_model_epoch_4500.pt"
 vocoder_pretrained_model_path = os.path.join("./vocoder/pretrained_models/", vocoder_pretrained_model_name)
 

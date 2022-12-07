@@ -66,8 +66,8 @@ def main(args):
 
 
     # Load vocoder
-    if hp.vocoder == 'vocgan':
-        vocoder = utils.get_vocgan(ckpt_path = hp.vocoder_pretrained_model_path)
+    if hp.vocoder in ["vocgan", "hifigan"]:
+        vocoder = utils.get_vocoder(ckpt_path = hp.vocoder_pretrained_model_path)
         vocoder.to(device)
     else:
         vocoder = None
